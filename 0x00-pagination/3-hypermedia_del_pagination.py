@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Deletion-resilient hypermedia pagination
+Description: The goal here is that if between two queries, certain rows are
+             removed from the dataset, the user does not miss items from
+             dataset when changing page
 """
 
 import csv
@@ -14,6 +16,7 @@ class Server:
     DATA_FILE = "Popular_Baby_Names.csv"
 
     def __init__(self):
+        ''' Initialize instance. '''
         self.__dataset = None
         self.__indexed_dataset = None
 
@@ -39,31 +42,31 @@ class Server:
             }
         return self.__indexed_dataset
 
-    def get_hyper_index(self, index: int = None,
-                        page_size: int = 10) -> Dict:
-        """ return all data"""
+    def get_hyper_index(self, index: int = None, page_size: int = 10) -> Dict:
+        ''' Return dict of pagination data.
+            Dict key/value pairs consist of the following:
+              index - the start index of the page
+              next_index - the start index of the next page
+              page_size
+              page_size - the number of items on the page
+              data - the data in the page itself '''
+        assert 0 <= index < len(self.dataset())
 
-        if index is None:
-            index = 0
+        indexed_dataset = self.indexed_dataset()
+        indexed_page = {}
 
-        # validate the index
-        assert isinstance(index, int)
-        assert 0 <= index < len(self.indexed_dataset())
-        assert isinstance(page_size, int) and page_size > 0
+        i = index
+        while (len(indexed_page) < page_size and i < len(self.dataset())):
+            if i in indexed_dataset:
+                indexed_page[i] = indexed_dataset[i]
+            i += 1
 
-        data = []  # collect all indexed data
-        next_index = index + page_size
-
-        for value in range(index, next_index):
-            if self.indexed_dataset().get(value):
-                data.append(self.indexed_dataset()[value])
-            else:
-                value += 1
-                next_index += 1
+        page = list(indexed_page.values())
+        page_indices = indexed_page.keys()
 
         return {
             'index': index,
-            'data': data,
-            'page_size': page_size,
-            'next_index': next_index
+            'next_index': max(page_indices) + 1,
+            'page_size': len(page),
+            'data': page
         }
